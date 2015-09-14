@@ -159,6 +159,7 @@
 
     var tex_uvTexRed;
     var tex_uvGrid;
+    var tex_crate;
     var tex_zonePlate;
 
     function initTexture() {
@@ -181,9 +182,16 @@
             handleLoadedTexture(tex_zonePlate)
         }
 
+        tex_crate = gl.createTexture();
+        tex_crate.image = new Image();
+        tex_crate.image.onload = function () {
+            handleLoadedTexture(tex_crate)
+        }
+
         tex_uvTexRed.image.src  = "uvTexRed.png";
         tex_uvGrid.image.src    = "uvGrid.png";
         tex_zonePlate.image.src = "zonePlate.png";
+        tex_crate.image.src     = "crate.png";
     }
 
     var mvMatrix = mat4.create();
@@ -361,6 +369,8 @@
             gl.bindTexture(gl.TEXTURE_2D, tex_uvGrid);
         } else if (texture == "zonePlate") {
             gl.bindTexture(gl.TEXTURE_2D, tex_zonePlate);
+        } else if (texture == "crate") {
+            gl.bindTexture(gl.TEXTURE_2D, tex_crate);
         }
 
         gl.activeTexture(gl.TEXTURE0);
@@ -432,6 +442,7 @@
         <option selected value="uvTexRed">uvTexRed.png</option>
         <option value="uvGrid">uvGrid.png</option>
         <option value="zonePlate">zonePlante.png</option>
+        <option value="crate">crate.png</option>
     </select>
 
     <span style="display:block; height:25;"></span>
