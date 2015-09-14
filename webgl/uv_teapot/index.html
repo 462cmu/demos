@@ -264,6 +264,7 @@
     }
 
     var tex_uvTexRed;
+    var tex_uvGrid;
     var tex_earth;
     var tex_galvanized;
 
@@ -273,7 +274,14 @@
         tex_uvTexRed.image.onload = function () {
             handleLoadedTexture(tex_uvTexRed)
         }
-        tex_uvTexRed.image.src  = "uvTexRed.png";
+        tex_uvTexRed.image.src = "uvTexRed.png";
+
+        tex_uvGrid = gl.createTexture();
+        tex_uvGrid.image = new Image();
+        tex_uvGrid.image.onload = function () {
+            handleLoadedTexture(tex_uvGrid)
+        }
+        tex_uvGrid.image.src = "uvGrid.png";
 
         tex_earth = gl.createTexture();
         tex_earth.image = new Image();
@@ -432,6 +440,8 @@
         var texture = document.getElementById("texture").value;
         if (texture == "uvTexRed") {
             gl.bindTexture(gl.TEXTURE_2D, tex_uvTexRed);
+        } else if (texture == "uvGrid") {
+            gl.bindTexture(gl.TEXTURE_2D, tex_uvGrid);
         } else if (texture == "earth") {
             gl.bindTexture(gl.TEXTURE_2D, tex_earth);
         } else if (texture == "galvanized") {
@@ -526,6 +536,7 @@
     <h2>Texture</h2>
     <select id="texture">
         <option selected value="uvTexRed">uvTexRed.png</option>
+        <option value="uvGrid">uvGrid.png</option>
         <option value="galvanized">galvanized.png</option>
         <option value="earth">earth.png</option>
     </select>
