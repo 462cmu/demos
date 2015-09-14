@@ -28,10 +28,12 @@
 
     varying vec2 vTextureCoord;
 
+    uniform float uMipBias;
+
     uniform sampler2D uSampler;
 
     void main(void) {
-        gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t));
+        gl_FragColor = texture2D(uSampler, vec2(vTextureCoord.s, vTextureCoord.t), uMipBias);
     }
 </script>
 
@@ -128,8 +130,11 @@
         gl.enableVertexAttribArray(shaderProgram1.vertexPositionAttribute);
 
         shaderProgram1.textureCoordAttribute = gl.getAttribLocation(shaderProgram1, "aTextureCoord");
+        
         gl.enableVertexAttribArray(shaderProgram1.textureCoordAttribute);
-
+        
+        shaderProgram1.mipBiasUniform = gl.getUniformLocation(shaderProgram1, "uMipBias");
+        
         shaderProgram1.pMatrixUniform = gl.getUniformLocation(shaderProgram1, "uPMatrix");
         shaderProgram1.mvMatrixUniform = gl.getUniformLocation(shaderProgram1, "uMVMatrix");
         shaderProgram1.samplerUniform = gl.getUniformLocation(shaderProgram1, "uSampler");
@@ -151,8 +156,10 @@
     function handleLoadedTexture(texture) {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, texture.image);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+        gl.generateMipmap(gl.TEXTURE_2D);
+
         gl.bindTexture(gl.TEXTURE_2D, null);
     }
 
@@ -356,6 +363,18 @@
 
         gl.useProgram(shaderProgram);
 
+        var mipbias = parseFloat(document.getElementById("mipbias").value);
+        gl.uniform1f(shaderProgram1.mipBiasUniform, mipbias)
+
+        var trilinearFiltering = document.getElementById("trilerp").checked;
+        if (trilinearFiltering) {
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+        } else {
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+        }
+
         gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
         gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, cubeVertexPositionBuffer.itemSize, gl.FLOAT, false, 0, 0);
 
@@ -437,7 +456,9 @@
     
     <br/>
 
-    Texture:
+    <input type="checkbox" id="trilerp" checked /> Trilinear filtering
+
+    <h2>Texture</h2>
     <select id="texture">
         <option selected value="uvTexRed">uvTexRed.png</option>
         <option value="uvGrid">uvGrid.png</option>
@@ -447,7 +468,12 @@
 
     <span style="display:block; height:25;"></span>
 
-    Shader:
+    <h2>Mip level bias</h2>
+    -8 <input id="mipbias" type="range" min="-8.0" max="8.0" value="0"/> 8
+
+    <span style="display:block; height:25;"></span>
+
+    <h2>Shader</h2>
     <select id="shader">
         <option selected value="normal">Normal</option>
         <option value="visualizer">Visualizer</option>
