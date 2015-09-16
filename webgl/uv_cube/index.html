@@ -372,7 +372,7 @@
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         } else {
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);
         }
 
         gl.bindBuffer(gl.ARRAY_BUFFER, cubeVertexPositionBuffer);
@@ -409,9 +409,9 @@
         if (lastTime != 0) {
             var elapsed = timeNow - lastTime;
 
-            xRot += (90 * elapsed) / 1000.0;
-            yRot += (90 * elapsed) / 1000.0;
-            zRot += (90 * elapsed) / 1000.0;
+            xRot += (90 * elapsed) / 2500.0;
+            yRot += (90 * elapsed) / 2500.0;
+            zRot += (90 * elapsed) / 2500.0;
         }
         lastTime = timeNow;
     }
