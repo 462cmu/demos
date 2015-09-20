@@ -124,7 +124,58 @@
         vec4 fragmentColor;
         fragmentColor = vec4(vTextureCoord.s, vTextureCoord.t, 0.0, 1.0);
         gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
-    }</script>
+    }
+</script>
+
+<script id="shader-fs3" type="x-shader/x-fragment">
+    #extension GL_EXT_shader_texture_lod : enable
+    precision mediump float;
+
+    varying vec2 vTextureCoord;
+    varying vec3 vTransformedNormal;
+    varying vec4 vPosition;
+
+    uniform float uMaterialShininess;
+    uniform float uLOD;
+
+    uniform bool uShowSpecularHighlights;
+    uniform bool uUseLighting;
+
+    uniform vec3 uAmbientColor;
+
+    uniform vec3 uPointLightingLocation;
+    uniform vec3 uPointLightingSpecularColor;
+    uniform vec3 uPointLightingDiffuseColor;
+
+    uniform sampler2D uSampler;
+
+    void main(void) {
+        vec3 lightWeighting;
+        if (!uUseLighting) {
+            lightWeighting = vec3(1.0, 1.0, 1.0);
+        } else {
+            vec3 lightDirection = normalize(uPointLightingLocation - vPosition.xyz);
+            vec3 normal = normalize(vTransformedNormal);
+
+            float specularLightWeighting = 0.0;
+            if (uShowSpecularHighlights) {
+                vec3 eyeDirection = normalize(-vPosition.xyz);
+                vec3 reflectionDirection = reflect(-lightDirection, normal);
+
+                specularLightWeighting = pow(max(dot(reflectionDirection, eyeDirection), 0.0), uMaterialShininess);
+            }
+
+            float diffuseLightWeighting = max(dot(normal, lightDirection), 0.0);
+            lightWeighting = uAmbientColor
+                + uPointLightingSpecularColor * specularLightWeighting
+                + uPointLightingDiffuseColor * diffuseLightWeighting;
+        }
+
+        vec4 fragmentColor;
+        fragmentColor = texture2DLodEXT(uSampler, vTextureCoord, uLOD);
+        gl_FragColor = vec4(fragmentColor.rgb * lightWeighting, fragmentColor.a);
+    }
+</script>
 
 <script type="text/javascript">
 
@@ -143,7 +194,7 @@
     }
 
 
-    function getShader(gl, id) {
+    function createShaderProgram(id) {
         var shaderScript = document.getElementById(id);
         if (!shaderScript) {
             return null;
@@ -185,9 +236,9 @@
 
     function initShaders() {
 
-        var vertexShader = getShader(gl, "shader-vs");
-        var fragmentShader1 = getShader(gl, "shader-fs1");
-        var fragmentShader2 = getShader(gl, "shader-fs2");
+        var vertexShader = createShaderProgram("shader-vs");
+        var fragmentShader1 = createShaderProgram("shader-fs1");
+        var fragmentShader2 = createShaderProgram("shader-fs2");
 
         shaderProgram1 = gl.createProgram();
         shaderProgram2 = gl.createProgram();
@@ -356,7 +407,6 @@
         emblemVertexIndexBuffer.itemSize = 1;
         emblemVertexIndexBuffer.numItems = meshData.triangles.length;
 
-        document.getElementById("loadingtext").textContent = "";
     }
 
 
@@ -386,7 +436,7 @@
         var shader = document.getElementById("shader").value;
         if (shader == "normal") {
             shaderProgram = shaderProgram1;
-        } else if (shader == "visualizer") {
+        } else if (shader == "visualize_uv") {
             shaderProgram = shaderProgram2;
         }
 
@@ -395,13 +445,30 @@
         var mipbias = parseFloat(document.getElementById("mipbias").value);
         gl.uniform1f(shaderProgram1.mipBiasUniform, mipbias)
 
-        var trilinearFiltering = document.getElementById("trilerp").checked;
-        if (trilinearFiltering) {
+        var texFilter = document.getElementById("filter").value;
+        if (texFilter == "nearest") {
+          document.getElementById("mipmap").disabled=false;
+          if (document.getElementById("mipmap").checked) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST_MIPMAP_LINEAR);        
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+          }
+        } else if (texFilter == "bilinear") {
+          document.getElementById("mipmap").disabled=false;
+          if (document.getElementById("mipmap").checked) {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_NEAREST);
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          }
+        } else if (texFilter == "trilinear") {
+          document.getElementById("mipmap").checked=true;
+          document.getElementById("mipmap").disabled=true;
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
-        } else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
         }
 
         var specularHighlights = document.getElementById("specular").checked;
@@ -528,14 +595,12 @@
     <h2>Shader</h2>
     <select id="shader">
         <option selected value="normal">Normal</option>
-        <option value="visualizer">Visualizer</option>
+        <option value="visualize_uv">UV Visualization</option>
     </select>
 
     <span style="display:block; height:25;"></span>
 
     <h2>Texture</h2>
-
-    <input type="checkbox" id="trilerp" checked /> Trilinear filter
 
     <h3>File</h3>
     <select id="texture">
@@ -544,10 +609,18 @@
       <option value="uvGrid">uvGrid.png</option>
     </select>
 
-    <h3>Mip level bias</h3>
+    <h3>Filter</h3>
+    <select id="filter">
+      <option value="nearest">Nearest</option>
+      <option value="bilinear">Bilinear</option>
+      <option selected value="trilinear">Trilinear</option>
+    </select>
+
+    <h3>Mipmap</h3>
+
+    <input type="checkbox" id="mipmap" checked disabled/> Enabled | Bias: 
     -4 <input id="mipbias" type="range" min="-4.0" max="4.0" value="0"/> 4
 
-    <span style="display:block; height:25;"></span>
 
     <h2>Lighting</h2> 
     
